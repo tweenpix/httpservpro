@@ -1,12 +1,13 @@
 package lib30
 
 import (
-	"database/sql"
 	"encoding/json"
 	"fmt"
 	"log"
 	"net/http"
 	"strconv"
+
+	"package30/server"
 
 	"github.com/go-chi/chi"
 	_ "github.com/go-sql-driver/mysql"
@@ -20,18 +21,6 @@ type User struct {
 }
 
 var users = make(map[int]*User)
-var nextID = 1
-var Database *sql.DB
-
-func main() {
-	// подключение к базе данных
-	db, err := sql.Open("mysql", "root@tcp(localhost:3306)/test")
-	Database = db
-	if err != nil {
-		panic(err.Error())
-	}
-	defer db.Close()
-}
 
 func Hello(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -41,33 +30,31 @@ hello world:)
 }
 
 func CreateUser(w http.ResponseWriter, r *http.Request) {
-	var user User
 
+	var user User
 	err := json.NewDecoder(r.Body).Decode(&user)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 	//fmt.Fprint(w, &user)
-	user.ID = nextID
-	nextID++
+	// user.ID = nextID
+	// nextID++
 
-	users[user.ID] = &user
+	// users[user.ID] = &user
 
 	w.WriteHeader(http.StatusCreated)
 	w.Header().Set("Content-Type", "application/json; charset=utf-8")
-	jsonData := json.NewEncoder(w).Encode(map[string]int{"id": user.ID})
-	fmt.Print(jsonData)
+	// json.NewEncoder(w).Encode(map[string]int{"id": user.ID})
+	// fmt.Print(jsonData)
+	// log.Printf("%v - %d", user.Name, user.Age)
 
-	log.Printf("%v - %d", user.Name, user.Age)
-
-	insert, err := Database.Query("INSERT INTO test_table(name, age) VALUES(?, ?)", user.Name, user.Age)
-	if err != nil {
+	_, err2 := server.Db.Exec("INSERT INTO test_table(name, age) VALUES(?, ?)", user.Name, user.Age)
+	if err2 != nil {
 		fmt.Println(err.Error())
 	}
-	defer insert.Close()
 
-	log.Println("User added to the database!")
+	log.Printf(`User "%v" added to the database!`, user.Name)
 }
 
 // 2
@@ -178,18 +165,29 @@ func GetUserFriends(w http.ResponseWriter, r *http.Request) {
 
 // 5
 func UpdateUserAge(w http.ResponseWriter, r *http.Request) {
+	var users []User
+
 	// Извлекаем ID пользователя из URL-адреса
-	userID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	//userID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	userID := chi.URLParam(r, "id")
+
+	query := "SELECT * FROM test_table WHERE id = ?"
+	err := server.Db.Select(&users, query, userID)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
+		panic(err.Error())
 	}
 
-	user, exists := users[userID]
-	if !exists {
-		http.Error(w, "user does not exist", http.StatusBadRequest)
-		return
+	for _, user := range users {
+
+		fmt.Printf("ID: %d, Name: %s, Age: %d, Friends: %s\n", user.ID, user.Name, user.Age, user.Friends)
 	}
+	// return
+
+	// user, exists := users[userID]
+	// if !exists {
+	// 	http.Error(w, "user does not exist", http.StatusBadRequest)
+	// 	return
+	// }
 
 	// Декодируем JSON-тело запроса
 	var requestBody map[string]string
@@ -200,17 +198,25 @@ func UpdateUserAge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Извлекаем новый возраст пользователя из JSON-тела запроса
-	newAge, err := strconv.Atoi(requestBody["new age"])
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+	// newAge := requestBody["new age"]
+	// // if err != nil {
+	// // 	http.Error(w, err.Error(), http.StatusBadRequest)
+	// // 	return
+	// // }
 
-	// Обновляем возраст пользователя в мапе
-	user.Age = newAge
-	users[userID] = user
+	// // Обновляем возраст пользователя в мапе
+	// // user.Age = newAge
+	// // users[userID] = user
+
+	// query_update := "UPDATE table_test SET age = " + newAge + " WHERE id = ?"
+
+	// _, err2 := server.Db.Exec(query_update, user.Age, user.ID)
+	// if err2 != nil {
+	// 	fmt.Println(err.Error())
+	// }
 
 	// Отправляем ответ
 	w.WriteHeader(http.StatusOK)
 	fmt.Fprint(w, "возраст пользователя успешно обновлён")
+
 }
