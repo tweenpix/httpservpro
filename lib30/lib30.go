@@ -5,7 +5,6 @@ import (
 	"fmt"
 	"log"
 	"net/http"
-	"strconv"
 
 	"package30/server"
 
@@ -14,10 +13,10 @@ import (
 )
 
 type User struct {
-	ID      int      `json:"id"`
-	Name    string   `json:"name"`
-	Age     int      `json:"age"`
-	Friends []string `json:"friends"`
+	ID      int     `json:"id"`
+	Name    string  `json:"name"`
+	Age     int     `json:"age"`
+	Friends []uint8 `json:"friends"`
 }
 
 var users = make(map[int]*User)
@@ -57,111 +56,111 @@ func CreateUser(w http.ResponseWriter, r *http.Request) {
 	log.Printf(`User "%v" added to the database!`, user.Name)
 }
 
-// 2
-func MakeFriends(w http.ResponseWriter, r *http.Request) {
-	var friendRequest struct {
-		SourceID int `json:"source_id"`
-		TargetID int `json:"target_id"`
-	}
+// // 2
+// func MakeFriends(w http.ResponseWriter, r *http.Request) {
+// 	var friendRequest struct {
+// 		SourceID int `json:"source_id"`
+// 		TargetID int `json:"target_id"`
+// 	}
 
-	err := json.NewDecoder(r.Body).Decode(&friendRequest)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+// 	err := json.NewDecoder(r.Body).Decode(&friendRequest)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
 
-	sourceUser, sourceExists := users[friendRequest.SourceID]
-	targetUser, targetExists := users[friendRequest.TargetID]
+// 	sourceUser, sourceExists := users[friendRequest.SourceID]
+// 	targetUser, targetExists := users[friendRequest.TargetID]
 
-	if !sourceExists || !targetExists {
-		http.Error(w, "one or both users do not exist", http.StatusBadRequest)
-		return
-	}
+// 	if !sourceExists || !targetExists {
+// 		http.Error(w, "one or both users do not exist", http.StatusBadRequest)
+// 		return
+// 	}
 
-	sourceUser.Friends = append(sourceUser.Friends, targetUser.Name)
-	targetUser.Friends = append(targetUser.Friends, sourceUser.Name)
+// 	sourceUser.Friends = append(sourceUser.Friends, targetUser.Name)
+// 	targetUser.Friends = append(targetUser.Friends, sourceUser.Name)
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("%s and %s are now friends", sourceUser.Name, targetUser.Name)))
-}
+// 	w.WriteHeader(http.StatusOK)
+// 	w.Write([]byte(fmt.Sprintf("%s and %s are now friends", sourceUser.Name, targetUser.Name)))
+// }
 
-// 3
-func DeleteUser(w http.ResponseWriter, r *http.Request) {
-	var deleteUserRequest struct {
-		TargetID int `json:"target_id"`
-	}
+// // 3
+// func DeleteUser(w http.ResponseWriter, r *http.Request) {
+// 	var deleteUserRequest struct {
+// 		TargetID int `json:"target_id"`
+// 	}
 
-	err := json.NewDecoder(r.Body).Decode(&deleteUserRequest)
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
+// 	err := json.NewDecoder(r.Body).Decode(&deleteUserRequest)
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
 
-	user, exists := users[deleteUserRequest.TargetID]
-	if !exists {
-		http.Error(w, "user does not exist", http.StatusBadRequest)
-		return
-	}
+// 	user, exists := users[deleteUserRequest.TargetID]
+// 	if !exists {
+// 		http.Error(w, "user does not exist", http.StatusBadRequest)
+// 		return
+// 	}
 
-	// Удаление пользователя из хранилища
-	delete(users, user.ID)
+// 	// Удаление пользователя из хранилища
+// 	delete(users, user.ID)
 
-	// Удаление пользователя из списков друзей всех его друзей
-	for _, friendName := range user.Friends {
-		friend, friendExists := findUserByName(friendName)
-		if friendExists {
-			friend.Friends = remove(friend.Friends, user.Name)
-		}
-	}
+// 	// Удаление пользователя из списков друзей всех его друзей
+// 	for _, friendName := range user.Friends {
+// 		friend, friendExists := findUserByName(friendName)
+// 		if friendExists {
+// 			friend.Friends = remove(friend.Friends, user.Name)
+// 		}
+// 	}
 
-	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("%s has been deleted", user.Name)))
-}
+// 	w.WriteHeader(http.StatusOK)
+// 	w.Write([]byte(fmt.Sprintf("%s has been deleted", user.Name)))
+// }
 
-// функция поиска пользователя по имени
-func findUserByName(name string) (*User, bool) {
-	for _, user := range users {
-		if user.Name == name {
-			return user, true
-		}
-	}
-	return nil, false
-}
+// // функция поиска пользователя по имени
+// func findUserByName(name string) (*User, bool) {
+// 	for _, user := range users {
+// 		if user.Name == name {
+// 			return user, true
+// 		}
+// 	}
+// 	return nil, false
+// }
 
-// функция удаления элемента из слайса
-func remove(slice []string, element string) []string {
-	for i, s := range slice {
-		if s == element {
-			return append(slice[:i], slice[i+1:]...)
-		}
-	}
-	return slice
-}
+// // функция удаления элемента из слайса
+// func remove(slice []string, element string) []string {
+// 	for i, s := range slice {
+// 		if s == element {
+// 			return append(slice[:i], slice[i+1:]...)
+// 		}
+// 	}
+// 	return slice
+// }
 
-// 4
-func GetUserFriends(w http.ResponseWriter, r *http.Request) {
-	// Извлекаем ID пользователя из URL-адреса
-	userID, err := strconv.Atoi(chi.URLParam(r, "id"))
-	if err != nil {
-		http.Error(w, err.Error(), http.StatusBadRequest)
-		return
-	}
-	//fmt.Fprint(w, userID)
-	user, exists := users[userID]
-	if !exists {
-		http.Error(w, "user does not exist", http.StatusBadRequest)
-		return
-	}
+// // 4
+// func GetUserFriends(w http.ResponseWriter, r *http.Request) {
+// 	// Извлекаем ID пользователя из URL-адреса
+// 	userID, err := strconv.Atoi(chi.URLParam(r, "id"))
+// 	if err != nil {
+// 		http.Error(w, err.Error(), http.StatusBadRequest)
+// 		return
+// 	}
+// 	//fmt.Fprint(w, userID)
+// 	user, exists := users[userID]
+// 	if !exists {
+// 		http.Error(w, "user does not exist", http.StatusBadRequest)
+// 		return
+// 	}
 
-	response := make(map[string]interface{})
-	response["user"] = user.Name
-	response["friends"] = user.Friends
+// 	response := make(map[string]interface{})
+// 	response["user"] = user.Name
+// 	response["friends"] = user.Friends
 
-	// Отправляем ответ в формате JSON
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode(response)
-}
+// 	// Отправляем ответ в формате JSON
+// 	w.Header().Set("Content-Type", "application/json")
+// 	w.WriteHeader(http.StatusOK)
+// 	json.NewEncoder(w).Encode(response)
+// }
 
 // 5
 func UpdateUserAge(w http.ResponseWriter, r *http.Request) {
