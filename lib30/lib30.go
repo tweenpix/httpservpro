@@ -90,23 +90,31 @@ func MakeFriends(w http.ResponseWriter, r *http.Request) {
 	if err1 != nil {
 		log.Fatal(err1)
 	}
-
+	var friends []uint8
+	err = json.Unmarshal([]byte(user.Friends), &friends)
+	if err != nil {
+		// Handle error
+	}
 	// Добавление нового друга в список
-	user.Friends = append(user.Friends, uint8(friendRequest.TargetID))
+	user.Friends = unique(append(friends, friendRequest.TargetID))
 
 	fmt.Println(user.Friends)
 
 	//отправляем массив на просеивание, оставляем только уникальные идентификаторы
-	uniqueSlice := unique(user.Friends)
+	uniqueSlice, err := json.Marshal(user.Friends)
+	if err != nil {
+		// Handle error
+	}
+	fmt.Println(uniqueSlice)
 
 	// Обновление списка друзей в базе данных
-	_, err2 := server.Db.Exec("UPDATE test_table SET friends=? WHERE id IN (?,?)", uniqueSlice, uint8(friendRequest.SourceID), uint8(friendRequest.TargetID))
+	_, err2 := server.Db.Exec("UPDATE test_table SET friends=? WHERE id IN (?,?)", uniqueSlice, friendRequest.SourceID, friendRequest.TargetID)
 	if err2 != nil {
 		log.Fatal(err2)
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("%s and %s are now friends", uint8(friendRequest.TargetID), uint8(friendRequest.SourceID))))
+	w.Write([]byte(fmt.Sprintf("%s and %s are now friends", friendRequest.TargetID, friendRequest.SourceID)))
 }
 
 // 3
