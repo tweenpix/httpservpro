@@ -22,6 +22,18 @@ type User struct {
 
 // var users = make(map[int]*User)
 
+func unique(intSlice []uint8) []uint8 {
+	keys := make(map[uint8]bool)
+	list := []uint8{}
+	for _, entry := range intSlice {
+		if _, value := keys[entry]; !value {
+			keys[entry] = true
+			list = append(list, entry)
+		}
+	}
+	return list
+}
+
 func Hello(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "text/html")
 	var users []User
@@ -84,14 +96,17 @@ func MakeFriends(w http.ResponseWriter, r *http.Request) {
 
 	fmt.Println(user.Friends)
 
+	//отправляем массив на просеивание, оставляем только уникальные идентификаторы
+	uniqueSlice := unique(user.Friends)
+
 	// Обновление списка друзей в базе данных
-	_, err2 := server.Db.Exec("UPDATE test_table SET friends=? WHERE id IN (?,?)", user.Friends, uint8(friendRequest.SourceID), uint8(friendRequest.TargetID))
+	_, err2 := server.Db.Exec("UPDATE test_table SET friends=? WHERE id IN (?,?)", uniqueSlice, uint8(friendRequest.SourceID), uint8(friendRequest.TargetID))
 	if err2 != nil {
 		log.Fatal(err2)
 	}
 
 	w.WriteHeader(http.StatusOK)
-	w.Write([]byte(fmt.Sprintf("%s and %s are now friends", friendRequest.TargetID, friendRequest.SourceID)))
+	w.Write([]byte(fmt.Sprintf("%s and %s are now friends", uint8(friendRequest.TargetID), uint8(friendRequest.SourceID))))
 }
 
 // 3
