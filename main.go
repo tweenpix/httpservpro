@@ -18,8 +18,8 @@ func main() {
 	r := chi.NewRouter()
 	r.Get("/", lib30.Hello)
 	r.Post("/create", lib30.CreateUser)
-	// r.Post("/make_friends", lib30.MakeFriends)
-	// r.Delete("/user/{id}", lib30.DeleteUser)
+	r.Post("/make_friends", lib30.MakeFriends)
+	r.Delete("/user/{id}", lib30.DeleteUser)
 	// r.Get("/friends/{id}", lib30.GetUserFriends)
 	r.Put("/{id}", lib30.UpdateUserAge)
 
