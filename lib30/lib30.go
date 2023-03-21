@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"log"
 	"net/http"
+	"strconv"
 
 	"package30/server"
 
@@ -19,7 +20,7 @@ type User struct {
 	Friends []uint8 `json:"friends"`
 }
 
-var users = make(map[int]*User)
+// var users = make(map[int]*User)
 
 func Hello(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusOK)
@@ -167,26 +168,22 @@ func UpdateUserAge(w http.ResponseWriter, r *http.Request) {
 	var users []User
 
 	// Извлекаем ID пользователя из URL-адреса
-	//userID, err := strconv.Atoi(chi.URLParam(r, "id"))
-	userID := chi.URLParam(r, "id")
+	userID, err := strconv.Atoi(chi.URLParam(r, "id"))
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
 	query := "SELECT * FROM test_table WHERE id = ?"
-	err := server.Db.Select(&users, query, userID)
-	if err != nil {
-		panic(err.Error())
+	sql2 := server.Db.Select(&users, query, userID)
+	if sql2 != nil {
+		panic(sql2.Error())
 	}
 
 	for _, user := range users {
 
 		fmt.Printf("ID: %d, Name: %s, Age: %d, Friends: %s\n", user.ID, user.Name, user.Age, user.Friends)
 	}
-	// return
-
-	// user, exists := users[userID]
-	// if !exists {
-	// 	http.Error(w, "user does not exist", http.StatusBadRequest)
-	// 	return
-	// }
 
 	// Декодируем JSON-тело запроса
 	var requestBody map[string]string
@@ -197,22 +194,21 @@ func UpdateUserAge(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Извлекаем новый возраст пользователя из JSON-тела запроса
-	// newAge := requestBody["new age"]
-	// // if err != nil {
-	// // 	http.Error(w, err.Error(), http.StatusBadRequest)
-	// // 	return
-	// // }
+	newAge, err := strconv.Atoi(requestBody["age"])
+	fmt.Printf("Устанавливаем возраст: %d\n", newAge)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
 
-	// // Обновляем возраст пользователя в мапе
-	// // user.Age = newAge
-	// // users[userID] = user
+	// Обновляем возраст пользователя в мапе
 
-	// query_update := "UPDATE table_test SET age = " + newAge + " WHERE id = ?"
+	query_update := "UPDATE test_table SET age = ? WHERE id = ?"
 
-	// _, err2 := server.Db.Exec(query_update, user.Age, user.ID)
-	// if err2 != nil {
-	// 	fmt.Println(err.Error())
-	// }
+	_, err2 := server.Db.Exec(query_update, newAge, userID)
+	if err2 != nil {
+		fmt.Println(err.Error())
+	}
 
 	// Отправляем ответ
 	w.WriteHeader(http.StatusOK)
